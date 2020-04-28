@@ -4,7 +4,7 @@ Plugin to enable getting individual files from a Image in Docker Hub without pul
 
 Based on this [post](https://medium.com/@thomas.shaw78/extracting-a-single-artifact-from-a-docker-image-without-pulling-3fc038a6e57e).
 
-# Pre-requisites
+# Prerequisites
 
 You must be using Docker 19.03 or newer for the plugin to work.
 
