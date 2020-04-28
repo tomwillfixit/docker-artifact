@@ -36,8 +36,17 @@ You must be using Docker 19.03 or newer for the plugin to work.
       get*        Get a File from a Docker Image in Docker Hub (tomwillfixit, v0.0.1)
     ```
     
-5. enjoy!
+5. Try it out!
+
+    For this to work the file must have a label on the Docker Image which points to the file sha256 value. For more details check out [this blog](https://medium.com/@thomas.shaw78/extracting-a-single-artifact-from-a-docker-image-without-pulling-3fc038a6e57e).
 
     ```bash
-    docker get
+    docker get <name of file> <image in docker hub>
+    
+    Example : 
+    docker get helloworld.bin tomwillfixit/healthcheck:latest
+    
+    [*] Get File : helloworld.bin from Docker Image : tomwillfixit/healthcheck:latest
+    [*] Retrieve Docker Hub Token
+    [*] Downloading file helloworld.bin (sha256:2db578c3bba06cf12b67ed42e72b8d0582e62dc2bde2fdcdaf77cb297fbd4fcb) ...
     ```
