@@ -33,7 +33,7 @@ You must be using Docker 19.03 or newer for the plugin to work.
       app*        Docker Application (Docker Inc., v0.8.0-beta1)
       builder     Manage builds
       buildx*     Build with BuildKit (Docker Inc., v0.2.0-tp)
-      get*  Description
+      get*        Get a File from a Docker Image in Docker Hub (tomwillfixit, v0.0.1)
     ```
     
 5. enjoy!
