@@ -56,7 +56,7 @@ Examples :
 
     docker get ls tomwillfixit/healthcheck:latest
     
-	docker get tom.jpg tomwillfixit/healthcheck:latest
+    docker get tom.jpg tomwillfixit/healthcheck:latest
 
 ```
 
