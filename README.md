@@ -33,20 +33,66 @@ You must be using Docker 19.03 or newer for the plugin to work.
       app*        Docker Application (Docker Inc., v0.8.0-beta1)
       builder     Manage builds
       buildx*     Build with BuildKit (Docker Inc., v0.2.0-tp)
-      get*        Get a File from a Docker Image in Docker Hub (tomwillfixit, v0.0.1)
+      get*        Get a File from a Docker Image in Docker Hub (tomwillfixit, v0.0.2)
     ```
     
 5. Try it out!
 
     For this to work the file must have a label on the Docker Image which points to the file sha256 value. For more details check out [this blog](https://medium.com/@thomas.shaw78/extracting-a-single-artifact-from-a-docker-image-without-pulling-3fc038a6e57e).
 
-    ```bash
-    docker get <name of file> <image in docker hub>
+## Usage
+
+```bash
+
+Usage:	docker get [option] <filename> <image name> 
+
+Get File from Image
+
+Option:
+
+ 	ls  -  List all files available to get
+
+Examples : 
+
+    docker get ls tomwillfixit/healthcheck:latest
     
-    Example : 
-    docker get helloworld.bin tomwillfixit/healthcheck:latest
-    
-    [*] Get File : helloworld.bin from Docker Image : tomwillfixit/healthcheck:latest
-    [*] Retrieve Docker Hub Token
-    [*] Downloading file helloworld.bin (sha256:2db578c3bba06cf12b67ed42e72b8d0582e62dc2bde2fdcdaf77cb297fbd4fcb) ...
-    ```
+	docker get tom.jpg tomwillfixit/healthcheck:latest
+
+```
+
+## Example Output 
+
+```bash
+
+# docker get ls tomwillfixit/healthcheck:latest
+
+[*] Listing Files available to get from Image : tomwillfixit/healthcheck:latest
+[*] Retrieve Docker Hub Token
+
+[*] Files available to get :
+
+	- donald.gif
+	- happy.jpg
+	- tom.jpg
+
+
+# docker get tom.jpg tomwillfixit/healthcheck:latest
+
+[*] Get File : tom.jpg from Docker Image : tomwillfixit/healthcheck:latest
+[*] Retrieve Docker Hub Token
+[*] Downloading file tom.jpg (sha256:ce16f10346e2302cf5ecc722501c43e44fa1bbfd0a7829ce79ee218ae3292d3a) ...
+
+```
+
+## More Info
+
+```
+docker inspect tomwillfixit/healthcheck:latest |jq -r '.[0].Config.Labels'
+{
+  "donald.gif": "sha256:5b429606ec8119c51b526b4c87ca697cfde680814a7ec1e2a62e0c61782bdbcb",
+  "happy.jpg": "sha256:58034856d4d0cbf1be6a96b42a95a0d2376a677106f7792d282fc47f48ceb637",
+  "tom.jpg": "sha256:ce16f10346e2302cf5ecc722501c43e44fa1bbfd0a7829ce79ee218ae3292d3a"
+}
+
+
+```
