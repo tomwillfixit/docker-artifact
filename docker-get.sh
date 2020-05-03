@@ -2,7 +2,7 @@
 
 docker_get_plugin_metadata() {
 	local vendor="tomwillfixit"
-	local version="v0.0.2"
+	local version="v0.0.2.1"
 	local url="https://t.co/QgwMQIxt4L?amp=1"
 	local description="Get a File from a Docker Image in Docker Hub"
 	cat <<-EOF
@@ -12,9 +12,7 @@ EOF
 
 get_token() {
   local image=$1
-
   echo "[*] Retrieve Docker Hub Token" >&2
-
   curl \
     --silent \
     "https://auth.docker.io/token?scope=repository:$image:pull&service=registry.docker.io" \
@@ -46,10 +44,10 @@ docker_get() {
 	docker_image=$2
 
  	echo "[*] Get File : $filename from Docker Image : $docker_image"	
-        token=$(get_token tomwillfixit/healthcheck)
 	reg=registry.hub.docker.com
 	repo=$(echo $docker_image |cut -d"/" -f1)
 	image=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f1)
+ 	token=$(get_token "$repo/$image")
 	tag=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f2)
 	file_sha256_value=$(curl --silent -H "Authorization: Bearer $token" https://$reg/v2/$repo/$image/manifests/$tag |jq -r '.history[0].v1Compatibility' |jq -r --arg FILENAME $filename '.container_config.Labels | to_entries[] |select(.key==$FILENAME)' |jq -r '.value')
 	if [ -z "${file_sha256_value}" ];then
@@ -64,10 +62,10 @@ docker_get() {
 list_files() {
 	docker_image=$1
 	echo "[*] Listing Files available to get from Image : ${docker_image}"
-	token=$(get_token tomwillfixit/healthcheck)
 	reg=registry.hub.docker.com
 	repo=$(echo $docker_image |cut -d"/" -f1)
         image=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f1)
+	token=$(get_token "$repo/$image")	
 	tag=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f2)
 	files=$(curl --silent -H "Authorization: Bearer $token" https://$reg/v2/$repo/$image/manifests/$tag |jq -r '.history[0].v1Compatibility' |jq -r '.container_config.Labels | to_entries[] | select(.value | contains("sha256"))' |jq -r '.key')
 	if [ -z "$files" ];then
