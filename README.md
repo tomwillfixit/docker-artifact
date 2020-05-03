@@ -84,6 +84,35 @@ Examples :
 
 ```
 
+## Label Artifacts
+
+In order to use the "docker get" command you need to have applied labels to each of the files you want to be able to "get".  The label-artifacts script is a work in progress and only works on Linux.
+
+How does it work?
+
+Provide the name of the file and the image it is in and the label-artifact scipt will add a label for the file. This allows us to get the file later.
+
+./label-artifacts <filename> <docker image name>
+
+Example Output :
+```
+./label-artifacts shipitcon.jpg sic.jpg tomwillfixit/test:latest
+
+File Name : shipitcon.jpg
+Layer ID  : b8dd8f676522
+SHA256    : sha256:13823b61591ad64cc00fa6530a3370da1458276db7171d0dbeb65c756578ab69
+
+File Name : sic.jpg
+Layer ID  : 7f5fd59aa4cd
+SHA256    : sha256:16f0fd16f7131a75a18bc48cc65fc75daad408631b141abe7768e75548b10e29
+
+Adding LABEL/s to image : tomwillfixit/test:latest
+
+ --label sic.jpg=sha256:16f0fd16f7131a75a18bc48cc65fc75daad408631b141abe7768e75548b10e29  
+ --label shipitcon.jpg=sha256:13823b61591ad64cc00fa6530a3370da1458276db7171d0dbeb65c756578ab69
+ 
+```
+	
 ## More Info
 
 ```
