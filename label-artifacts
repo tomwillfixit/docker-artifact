@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+# Work in Progress
+# LINUX ONLY, OVERLAY2 ONLY
+
+# Usage :
+
+# enable-labels <filename> <docker image>
+
+# Example :
+
+# label-artifacts shipitcon.jpg tomwillfixit/test:latest
+
+# This will be built into docker get plugin whenever support for MacOS is finished.
+
+array=( $@ )
+len=${#array[@]}
+image=${array[$len-1]}
+files=${array[@]:0:$len-1}
+linux_overlay_sha_location="/var/lib/docker/image/overlay2/distribution/v2metadata-by-diffid/sha256"
+
+for file_name in $(echo ${files});
+do 
+  layer_id=$(docker history "${image}" --no-trunc |grep "${file_name}" |grep -v LABEL |awk '{print $1}' |cut -d':' -f2 |cut -c1-12)
+  if [ -z "${layer_id}" ];then
+      	echo "No label found for file : ${file_name}"
+	exit 1
+  else
+	rootfs=$(docker inspect $layer_id |jq -r '.[].RootFS.Layers[-1]' |cut -d":" -f2)
+
+	file_blob_sha=$(cat $linux_overlay_sha_location/$rootfs |jq -r '.[].Digest'|uniq)
+
+	if [ -z "${file_blob_sha}" ];then
+    		echo "Unable to find SHA for file : $file_name"
+    		echo "Ensure you have pushed image : $image to Docker Hub"
+    		exit 1
+	else
+		echo "File Name : $file_name"
+		echo "Layer ID  : ${layer_id}"
+		echo "SHA256    : ${file_blob_sha}"
+		LABEL=" --label $file_name=$file_blob_sha ${LABEL}"
+	fi
+  fi
+done
+
+echo "Adding LABEL/s to image : $image"
+echo "${LABEL}"
+
+docker build -t $image ${LABEL} .
+
+docker push $image
