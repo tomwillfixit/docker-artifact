@@ -1,6 +1,10 @@
-# Docker Artifact CLI plugin (Renamed from docker get)
+# Docker Artifact CLI plugin (renamed from docker get)
 
-This CLI plugin simplifies adding labels to artifacts within a Docker Image and enables getting individual files from a Image in Docker Hub without pulling the image. In Multi Stage builds it is common practice to copy artifacts from other container images at build time using this type of command :
+This CLI plugin simplifies adding labels to file artifacts within a Docker Image and enables getting individual files from a Image in Docker Hub without pulling the image. This is a #justforfun #sparetime project and can be used as is. If folks find this useful please star and maybe mention on Twitter (@tomwillfixit). Thanks.
+
+# Why?
+
+In Multi Stage builds it is common practice to copy artifacts from other container images at build time using this type of command :
 ```
 COPY --from=tomwillfixit/test:latest /tmp/shipitcon.jpg /tmp
 ```
