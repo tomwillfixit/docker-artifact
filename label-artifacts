@@ -1,23 +1,34 @@
 #!/usr/bin/env bash
 
-# Work in Progress
-# LINUX ONLY, OVERLAY2 ONLY
+# This script should be run after docker build and docker push has been run.
+
+version=0.0.1
 
 # Usage :
 
-# enable-labels <filename> <docker image>
-
+# label-artifacts <filename> <docker image>
 # Example :
 
 # label-artifacts shipitcon.jpg tomwillfixit/test:latest
-
 # This will be built into docker get plugin whenever support for MacOS is finished.
+
+if [ $# -eq 0 ];then
+    echo "Usage: $0 <filename> <docker image name>"
+    exit 0
+fi
+
+OS_TYPE=$(uname -s)
+
+if [[ "${OS_TYPE}" != "Linux" ]] && [[ "${OS_TYPE}" != "Darwin" ]]; then
+    echo "[ERROR] ... Detected unsupported OS type : ${OS_TYPE}. Exiting."
+    exit 1
+fi
 
 array=( $@ )
 len=${#array[@]}
 image=${array[$len-1]}
 files=${array[@]:0:$len-1}
-linux_overlay_sha_location="/var/lib/docker/image/overlay2/distribution/v2metadata-by-diffid/sha256"
+overlay_sha_location="/var/lib/docker/image/overlay2/distribution/v2metadata-by-diffid/sha256"
 
 for file_name in $(echo ${files});
 do 
@@ -27,8 +38,12 @@ do
 	exit 1
   else
 	rootfs=$(docker inspect $layer_id |jq -r '.[].RootFS.Layers[-1]' |cut -d":" -f2)
-
-	file_blob_sha=$(cat $linux_overlay_sha_location/$rootfs |jq -r '.[].Digest'|uniq)
+    	if [ "${OS_TYPE}" = "Darwin" ];then
+ 		file_blob_sha_mac=$(docker run -it --privileged --pid=host debian nsenter -t 1 -m -u -n -i cat ${overlay_sha_location}/${rootfs})
+		file_blob_sha=$(echo ${file_blob_sha_mac} |jq -r '.[].Digest'|uniq)
+	else
+		file_blob_sha=$(cat $overlay_sha_location/$rootfs |jq -r '.[].Digest'|uniq)
+	fi
 
 	if [ -z "${file_blob_sha}" ];then
     		echo "Unable to find SHA for file : $file_name"
