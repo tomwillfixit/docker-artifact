@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-docker_get_plugin_metadata() {
+docker_artifact_plugin_metadata() {
 	local vendor="tomwillfixit"
-	local version="v0.0.2.1"
+	local version="v0.0.1"
 	local url="https://t.co/QgwMQIxt4L?amp=1"
-	local description="Get a File from a Docker Image in Docker Hub"
+	local description="Manage Artifacts"
 	cat <<-EOF
 	{"SchemaVersion":"0.1.0","Vendor":"${vendor}","Version":"${version}","ShortDescription":"${description}","URL":"${url}"}
 EOF
@@ -21,23 +21,75 @@ get_token() {
 
 usage() {
 	echo """
+Usage : docker artifact [command]
 
-Usage:	docker get [option] <filename> <image name> 
+Command :
 
-Get File from Image
-
-Option:
-
- 	ls  -  List all files available to get
+ 	ls    - List all files available to get 
+	get   - Get a file from an Image 
+	label - Add a LABEL to file inside Image 
 
 Examples : 
 
-	docker get helloworld.bin tomwillfixit/healthcheck:latest
-
-	docker get ls tomwillfixit/healthcheck:latest 
+	docker artifact ls tomwillfixit/healthcheck:latest 
+	docker artifact get helloworld.bin tomwillfixit/healthcheck:latest 
+	docker artifact label helloworld.bin tomwillfixit/healthcheck:latest
 
 """
+exit 0
 }
+
+add_label() {
+
+array=( $@ )
+len=${#array[@]}
+image=${array[$len-1]}
+files=${array[@]:0:$len-1}
+overlay_sha_location="/var/lib/docker/image/overlay2/distribution/v2metadata-by-diffid/sha256"
+
+OS_TYPE=$(uname -s)
+
+if [[ "${OS_TYPE}" != "Linux" ]] && [[ "${OS_TYPE}" != "Darwin" ]]; then
+    echo "[ERROR] ... Detected unsupported OS type : ${OS_TYPE}. Exiting."
+    exit 1
+fi
+
+for file_name in $(echo ${files});
+do 
+  layer_id=$(docker history "${image}" --no-trunc |grep "${file_name}" |grep -v LABEL |awk '{print $1}' |cut -d':' -f2 |cut -c1-12)
+  if [ -z "${layer_id}" ];then
+      	echo "No label found for file : ${file_name}"
+	exit 1
+  else
+	rootfs=$(docker inspect $layer_id |jq -r '.[].RootFS.Layers[-1]' |cut -d":" -f2)
+    	if [ "${OS_TYPE}" = "Darwin" ];then
+ 		file_blob_sha_mac=$(docker run -it --privileged --pid=host debian nsenter -t 1 -m -u -n -i cat ${overlay_sha_location}/${rootfs})
+		file_blob_sha=$(echo ${file_blob_sha_mac} |jq -r '.[].Digest'|uniq)
+	else
+		file_blob_sha=$(cat $overlay_sha_location/$rootfs |jq -r '.[].Digest'|uniq)
+	fi
+
+	if [ -z "${file_blob_sha}" ];then
+    		echo "Unable to find SHA for file : $file_name"
+    		echo "Ensure you have pushed image : $image to Docker Hub"
+    		exit 1
+	else
+		echo "File Name : $file_name"
+		echo "Layer ID  : ${layer_id}"
+		echo "SHA256    : ${file_blob_sha}"
+		LABEL=" --label $file_name=$file_blob_sha ${LABEL}"
+	fi
+  fi
+done
+
+echo "Adding LABEL/s to image : $image"
+echo "${LABEL}"
+
+docker build -t $image ${LABEL} .
+docker push $image
+
+}
+
 
 docker_get() {
 	filename=$1
@@ -83,16 +135,20 @@ list_files() {
 
 case "$1" in
 	docker-cli-plugin-metadata)
-		docker_get_plugin_metadata
+		docker_artifact_plugin_metadata
 		;;
 	*)
 		if [ -z $2 ] || [ -z $3 ];then
                     	usage
-			exit 0
 		elif [ "$2" = "ls" ];then
 			list_files $3
+		elif [ "$2" = "get" ];then
+			docker_get $3 $4
+		elif [ "$2" = "label" ];then
+			echo "${*:3}"
+			add_label ${*:3}
 		else
-			docker_get $2 $3
+			usage
 		fi
 		;;
 esac
