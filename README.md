@@ -1,14 +1,14 @@
-# Docker Get CLI plugin
+# Docker Artifact CLI plugin (Renamed from docker get)
 
-Docker plugin to enable getting individual files from a Image in Docker Hub without pulling the image. It's quite a common pattern in Multi Stage builds to copy artifacts from other container images at build time using this type of command :
+This CLI plugin simplifies adding labels to artifacts within a Docker Image and enables getting individual files from a Image in Docker Hub without pulling the image. In Multi Stage builds it is common practice to copy artifacts from other container images at build time using this type of command :
 ```
 COPY --from=tomwillfixit/test:latest /tmp/shipitcon.jpg /tmp
 ```
 This command results in the whole tomwillfixit/test:latest image being pulled.
 
-Using "docker get" we can just pull the files we need with a command like this :
+Using "docker artifact" we can just pull the files we need with a command like this :
 ```
-RUN ./docker-get get shipitcon.jpg tomwillfixit/test:latest
+RUN ./docker-artifact get shipitcon.jpg tomwillfixit/test:latest
 ```
 This command relies on a LABEL pointing to the layer containing the "shipitcon.jpg" file and we pull just that single layer.
 
@@ -23,15 +23,15 @@ You must be using Docker 19.03 or newer for the plugin to work.
     ```bash
     mkdir -p ~/.docker/cli-plugins
     ```
-2. download the "plugin", and save it as `~/.docker/cli-plugins/docker-get` (note: no `.sh` extension!)
+2. download the "plugin", and save it as `~/.docker/cli-plugins/docker-artifact` (note: no `.sh` extension!)
 
     ```bash
-    curl https://raw.githubusercontent.com/tomwillfixit/docker-get/master/docker-get.sh > ~/.docker/cli-plugins/docker-get
+    curl https://raw.githubusercontent.com/tomwillfixit/docker-get/master/docker-artifact.sh > ~/.docker/cli-plugins/docker-artifact
     ```
 3. make it executable
 
     ```bash
-    chmod +x ~/.docker/cli-plugins/docker-get
+    chmod +x ~/.docker/cli-plugins/docker-artifact
     ```
 
 4. run the `help` command to verify the plugin was installed
@@ -40,10 +40,8 @@ You must be using Docker 19.03 or newer for the plugin to work.
     docker help
     ...
     Management Commands:
-      app*        Docker Application (Docker Inc., v0.8.0-beta1)
-      builder     Manage builds
-      buildx*     Build with BuildKit (Docker Inc., v0.2.0-tp)
-      get*        Get a File from a Docker Image in Docker Hub (tomwillfixit, v0.0.2)
+  	app*        Docker Application (Docker Inc., v0.8.0)
+  	artifact*   Manage Artifacts in Docker Images (tomwillfixit, v0.0.1)
     ```
     
 5. Try it out!
@@ -53,74 +51,63 @@ You must be using Docker 19.03 or newer for the plugin to work.
 ## Usage
 
 ```bash
+Usage : docker artifact [command]
 
-Usage:	docker get [option] <filename> <image name> 
+Command :
 
-Get File from Image
-
-Option:
-
- 	ls  -  List all files available to get
+ 	ls    - List all files available to get 
+	get   - Get a single file from an Image 
+	label - Add a LABEL to file or multiple files inside an Image 
 
 Examples : 
 
-    docker get ls tomwillfixit/healthcheck:latest
-    
-    docker get tom.jpg tomwillfixit/healthcheck:latest
+	docker artifact ls tomwillfixit/healthcheck:latest 
+	docker artifact get helloworld.bin tomwillfixit/healthcheck:latest 
+	docker artifact label helloworld.bin tomwillfixit/healthcheck:latest
 
 ```
 
 ## Example Output 
 
-```bash
+List all files available to "get" :
 
-# docker get ls tomwillfixit/healthcheck:latest
+```bash
+# docker artifact ls tomwillfixit/healthcheck:latest
 
 [*] Listing Files available to get from Image : tomwillfixit/healthcheck:latest
 [*] Retrieve Docker Hub Token
-
 [*] Files available to get :
 
 	- donald.gif
-	- happy.jpg
-	- tom.jpg
+```
 
+Get a single file from an Image in Docker Hub :
 
-# docker get tom.jpg tomwillfixit/healthcheck:latest
+```bash
+# docker artifact get donald.gif tomwillfixit/healthcheck:latest 
 
-[*] Get File : tom.jpg from Docker Image : tomwillfixit/healthcheck:latest
+[*] Get File : donald.gif from Docker Image : tomwillfixit/healthcheck:latest
 [*] Retrieve Docker Hub Token
-[*] Downloading file tom.jpg (sha256:ce16f10346e2302cf5ecc722501c43e44fa1bbfd0a7829ce79ee218ae3292d3a) ...
+[*] Downloading file donald.gif (sha256:c9f499234b79c5eec68b23c0ecb92bed8bc87a734428899abce0d4bb2510e059) ...
 
 ```
 
-## Label Artifacts
+Add a LABEL to a file in Docker Image :
 
-In order to use the "docker get" command you need to have applied labels to each of the files you want to be able to "get".  The label-artifacts script is a work in progress and only works on Linux.
+In order to "get" an individual file from a Docker Image it must first have a specific label.  The Dockerfile should include a line similar to : "COPY donald.gif /tmp/donald.gif". When the image is built, push it to Docker Hub and then run the next command to add a label to the image :
 
-How does it work?
-
-Provide the name of the file and the image it is in and the label-artifact scipt will add a label for the file. This allows us to get the file later.
-
-./label-artifacts <filename> <docker image name>
-
-Example Output :
 ```
-./label-artifacts shipitcon.jpg sic.jpg tomwillfixit/test:latest
+# docker artifact label donald.gif tomwillfixit/healthcheck:latest
 
-File Name : shipitcon.jpg
-Layer ID  : b8dd8f676522
-SHA256    : sha256:13823b61591ad64cc00fa6530a3370da1458276db7171d0dbeb65c756578ab69
+[*] File Name : donald.gif
+[*] Layer ID  : 8b2b71fb3f1c
+[*] SHA256    : sha256:c9f499234b79c5eec68b23c0ecb92bed8bc87a734428899abce0d4bb2510e059
 
-File Name : sic.jpg
-Layer ID  : 7f5fd59aa4cd
-SHA256    : sha256:16f0fd16f7131a75a18bc48cc65fc75daad408631b141abe7768e75548b10e29
-
-Adding LABEL/s to image : tomwillfixit/test:latest
-
- --label sic.jpg=sha256:16f0fd16f7131a75a18bc48cc65fc75daad408631b141abe7768e75548b10e29  
- --label shipitcon.jpg=sha256:13823b61591ad64cc00fa6530a3370da1458276db7171d0dbeb65c756578ab69
+[*] Adding LABEL/s to image : tomwillfixit/healthcheck:latest
+ --label donald.gif=sha256:c9f499234b79c5eec68b23c0ecb92bed8bc87a734428899abce0d4bb2510e059 
  
+
+This command will search for the Layer ID of the layer containing the file "donald.gif". Using this ID we can find the sha256 value of the blob containing "donald.gif" and a label is added to the image and pushed to Docker Hub. At this point we can use the docker artifact get command to pull the single file.
 ```
 
 ## Example Dockerfile 
@@ -130,9 +117,9 @@ FROM alpine:3.11
 
 RUN apk update && apk add bash jq curl
 
-COPY docker-get /docker-get
+COPY docker-artifact /docker-artifact
 
-#RUN ./docker-get get shipitcon.jpg tomwillfixit/test:latest
+#RUN ./docker-artifact get shipitcon.jpg tomwillfixit/test:latest
 
 COPY --from=tomwillfixit/test:latest /tmp/shipitcon.jpg /tmp
 
@@ -174,9 +161,9 @@ Executing ca-certificates-20191127-r1.trigger
 OK: 10 MiB in 24 packages
 Removing intermediate container 68e8409923ab
  ---> a5d0abc39e26
-Step 3/5 : COPY docker-get /docker-get
+Step 3/5 : COPY docker-artifact /docker-artifact
  ---> a6b15d7220bd
-Step 4/5 : RUN ./docker-get get shipitcon.jpg tomwillfixit/test:latest
+Step 4/5 : RUN ./docker-artifact get shipitcon.jpg tomwillfixit/test:latest
  ---> Running in 317700daaadd
 [*] Get File : shipitcon.jpg from Docker Image : tomwillfixit/test:latest
 [*] Retrieve Docker Hub Token
