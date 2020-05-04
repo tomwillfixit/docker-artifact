@@ -142,11 +142,11 @@ FROM alpine:3.11
 
 RUN apk update && apk add bash jq curl
 
-COPY docker-artifact /docker-artifact
+COPY docker-artifact.sh /docker-artifact
 
-#RUN ./docker-artifact get shipitcon.jpg tomwillfixit/test:latest
-
-COPY --from=tomwillfixit/test:latest /tmp/shipitcon.jpg /tmp
+RUN ./docker-artifact artifact get happy.jpg tomwillfixit/healthcheck:latest
+RUN ./docker-artifact artifact get donald.gif tomwillfixit/healthcheck:latest
+RUN ./docker-artifact artifact get tom.jpg tomwillfixit/healthcheck:latest
 
 ENTRYPOINT /bin/bash
 
