@@ -50,7 +50,25 @@ You must be using Docker 19.03 or newer for the plugin to work.
     
 5. Try it out!
 
-    For this to work the file must have a label on the Docker Image which points to the file sha256 value. For more details check out [this blog](https://medium.com/@thomas.shaw78/extracting-a-single-artifact-from-a-docker-image-without-pulling-3fc038a6e57e).
+    Use the "COPY" directive in your Dockerfile to add a file to a single layer of the image.
+    Example :
+    ```
+    COPY important.bin /tmp/important.bin
+    ```
+    Build the image as normal and push to Docker Hub. 
+    
+    Now we add the label by running :
+    ```
+    # docker artifact label important.bin <name of docker image>
+    ```
+    At this point we can list the files available to get and also get the file directly from Docker Hub without needing to pull the image :
+    ```
+    # docker artifact ls <name of docker image>
+    # docker artifact get important.bin <name of docker image>
+    
+    ```    
+    
+    For more details check out [this blog](https://medium.com/@thomas.shaw78/extracting-a-single-artifact-from-a-docker-image-without-pulling-3fc038a6e57e).
 
 ## Usage
 
