@@ -74,15 +74,15 @@ do
     		echo "Ensure you have pushed image : $image to Docker Hub"
     		exit 1
 	else
-		echo "File Name : $file_name"
-		echo "Layer ID  : ${layer_id}"
-		echo "SHA256    : ${file_blob_sha}"
+		echo "[*] File Name : $file_name"
+		echo "[*] Layer ID  : ${layer_id}"
+		echo "[*] SHA256    : ${file_blob_sha}"
 		LABEL=" --label $file_name=$file_blob_sha ${LABEL}"
 	fi
   fi
 done
 
-echo "Adding LABEL/s to image : $image"
+echo -e "[*] Adding LABEL/s to image : $image\n"
 echo "${LABEL}"
 
 docker build -t $image ${LABEL} .
