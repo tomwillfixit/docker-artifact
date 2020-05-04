@@ -108,6 +108,9 @@ In order to "get" an individual file from a Docker Image it must first have a sp
  
 
 This command will search for the Layer ID of the layer containing the file "donald.gif". Using this ID we can find the sha256 value of the blob containing "donald.gif" and a label is added to the image and pushed to Docker Hub. At this point we can use the docker artifact get command to pull the single file.
+
+If you get a message similar to "No label found for file : donald.gif" then it means the image hasn't been pushed to Docker Hub.
+
 ```
 
 ## Example Dockerfile 
