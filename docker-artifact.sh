@@ -4,7 +4,7 @@ docker_artifact_plugin_metadata() {
 	local vendor="tomwillfixit"
 	local version="v0.0.1"
 	local url="https://t.co/QgwMQIxt4L?amp=1"
-	local description="Manage Artifacts"
+	local description="Manage Artifacts in Docker Images"
 	cat <<-EOF
 	{"SchemaVersion":"0.1.0","Vendor":"${vendor}","Version":"${version}","ShortDescription":"${description}","URL":"${url}"}
 EOF
