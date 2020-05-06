@@ -2,7 +2,7 @@
 
 docker_artifact_plugin_metadata() {
 	local vendor="tomwillfixit"
-	local version="v0.0.1"
+	local version="v0.0.3"
 	local url="https://t.co/QgwMQIxt4L?amp=1"
 	local description="Manage Artifacts in Docker Images"
 	cat <<-EOF
@@ -26,14 +26,14 @@ Usage : docker artifact [command]
 Command :
 
  	ls    - List all files available to get 
-	get   - Get a file from an Image 
-	label - Add a LABEL to file inside Image 
+	get   - Get a file (or multiple files) from an Image 
+	label - Add a LABEL to file (or multiple files) inside an Image 
 
 Examples : 
 
 	docker artifact ls tomwillfixit/healthcheck:latest 
-	docker artifact get helloworld.bin tomwillfixit/healthcheck:latest 
-	docker artifact label helloworld.bin tomwillfixit/healthcheck:latest
+	docker artifact get helloworld.bin happy.jpg tomwillfixit/healthcheck:latest 
+	docker artifact label helloworld.bin happy.jpg tomwillfixit/healthcheck:latest
 
 """
 exit 0
@@ -92,15 +92,21 @@ docker push $image
 
 
 docker_get() {
-	filename=$1
-	docker_image=$2
 
+array=( $@ )
+len=${#array[@]}
+docker_image=${array[$len-1]}
+files=${array[@]:0:$len-1}
+
+reg=registry.hub.docker.com
+repo=$(echo $docker_image |cut -d"/" -f1)
+image=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f1)
+token=$(get_token "$repo/$image")
+tag=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f2)
+
+for filename in $(echo ${files});
+do
  	echo "[*] Get File : $filename from Docker Image : $docker_image"	
-	reg=registry.hub.docker.com
-	repo=$(echo $docker_image |cut -d"/" -f1)
-	image=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f1)
- 	token=$(get_token "$repo/$image")
-	tag=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f2)
 	file_sha256_value=$(curl --silent -H "Authorization: Bearer $token" https://$reg/v2/$repo/$image/manifests/$tag |jq -r '.history[0].v1Compatibility' |jq -r --arg FILENAME $filename '.container_config.Labels | to_entries[] |select(.key==$FILENAME)' |jq -r '.value')
 	if [ -z "${file_sha256_value}" ];then
 		echo "[*] File : $filename is not available to get."
@@ -109,6 +115,8 @@ docker_get() {
         	echo "[*] Downloading file $filename ($file_sha256_value) ..."
  		curl -s -L -H "Authorization: Bearer $token" "https://registry.hub.docker.com/v2/$repo/$image/blobs/$file_sha256_value" |tar -xz
         fi
+done
+
 }
 
 list_files() {
@@ -143,9 +151,8 @@ case "$1" in
 		elif [ "$2" = "ls" ];then
 			list_files $3
 		elif [ "$2" = "get" ];then
-			docker_get $3 $4
+			docker_get ${*:3} 
 		elif [ "$2" = "label" ];then
-			echo "${*:3}"
 			add_label ${*:3}
 		else
 			usage
