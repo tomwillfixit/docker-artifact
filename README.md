@@ -1,6 +1,6 @@
 # Docker Artifact CLI plugin (renamed from docker get)
 
-This CLI plugin simplifies adding labels to file artifacts within a Docker Image and enables getting individual files from a Image in Docker Hub without pulling the image. This is a #justforfun #sparetime project and can be used as is. If folks find this useful please star and maybe mention on Twitter (@tomwillfixit). Thanks.
+This CLI plugin simplifies adding labels to file artifacts within a Docker Image and enables getting files from a Image in Docker Hub without pulling the image. This is a #justforfun #sparetime project and can be used as is. If folks find this useful please star and maybe mention on Twitter (@tomwillfixit). Thanks.
 
 # Why?
 
@@ -12,9 +12,9 @@ This command results in the whole tomwillfixit/test:latest image being pulled.
 
 Using "docker artifact" we can just pull the files we need with a command like this :
 ```
-RUN ./docker-artifact get shipitcon.jpg tomwillfixit/test:latest
+RUN ./docker-artifact get tom.jpg happy.jpg tomwillfixit/healthcheck:latest
 ```
-This command relies on a LABEL pointing to the layer containing the "shipitcon.jpg" file and we pull just that single layer.
+This command relies on a LABEL pointing to the layer containing the "happy.jpg" file and we pull just that single layer.
 
 Based on this [post](https://medium.com/@thomas.shaw78/extracting-a-single-artifact-from-a-docker-image-without-pulling-3fc038a6e57e).
 
@@ -78,14 +78,14 @@ Usage : docker artifact [command]
 Command :
 
  	ls    - List all files available to get 
-	get   - Get a single file from an Image 
-	label - Add a LABEL to file or multiple files inside an Image 
+	get   - Get a file (or multiple files) from an Image 
+	label - Add a LABEL to file (or multiple files) inside an Image 
 
 Examples : 
 
 	docker artifact ls tomwillfixit/healthcheck:latest 
-	docker artifact get helloworld.bin tomwillfixit/healthcheck:latest 
-	docker artifact label helloworld.bin tomwillfixit/healthcheck:latest
+	docker artifact get helloworld.bin tom.jpg tomwillfixit/healthcheck:latest 
+	docker artifact label helloworld.bin tom.jpg tomwillfixit/healthcheck:latest
 
 ```
 
