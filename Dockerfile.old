@@ -1,7 +1,13 @@
 FROM alpine:3.11
 
 RUN apk add --update \
-    curl jq bash
+    python3 curl jq bash
+
+# Upgrade pip3
+RUN pip3 install -U pip
+
+# Install awscli 
+RUN pip3 install awscli==1.18.9 fastly 
 
 # Download file from image
 
