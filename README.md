@@ -160,7 +160,23 @@ RUN /docker-artifact.sh artifact get tom.jpg tomwillfixit/healthcheck:latest
 
 ENTRYPOINT ["/bin/bash"]
 ```
+Build Image :
+```
+DOCKER_BUILDKIT=1 docker build -t artifact:latest .
+```
 
+When this image is built using BuildKit, 2 mount caches are created; one called apk and one called pip.  These can be found with :
+```
+docker system df -v |grep cachemount
+CACHE ID            CACHE TYPE          SIZE                CREATED             LAST USED           USAGE               SHARED
+0pgv0dm2h4c6        exec.cachemount     22.3MB              37 minutes ago      About a minute ago   2                   false
+wmar9c2c0nb5        exec.cachemount     21.1MB              36 minutes ago      About a minute ago   5                   false
+
+The cache is stored under /var/lib/docker/overlay2/<cache id>
+
+The number of times the cache is used is a useful value and can help determine which caches are the most useful.
+
+```
 ## Comparison
 
 Comparing a regular docker build with RUN --copy against a build using [BuildKit](https://docs.docker.com/develop/develop-images/build_enhancements/) and docker-artifact.
