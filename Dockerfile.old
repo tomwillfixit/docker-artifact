@@ -1,0 +1,10 @@
+FROM alpine:3.11
+
+RUN apk add --update \
+    curl jq bash
+
+# Download file from image
+
+COPY --from=tomwillfixit/healthcheck:latest /tmp/tom.jpg .
+
+ENTRYPOINT ["/bin/bash"]

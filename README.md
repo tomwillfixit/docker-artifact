@@ -138,38 +138,37 @@ If you get a message similar to "No label found for file : donald.gif" then it m
 ## Example Dockerfile 
 
 ```
+# syntax=docker/dockerfile:experimental
+
 FROM alpine:3.11
 
-RUN apk update && apk add bash jq curl
+RUN --mount=type=cache,id=apk,target=/var/cache/apk ln -vs /var/cache/apk /etc/apk/cache && \
+	apk add --update \
+        curl jq bash
 
-COPY docker-artifact.sh /docker-artifact
+COPY docker-artifact.sh /docker-artifact.sh
 
-RUN ./docker-artifact artifact get happy.jpg tomwillfixit/healthcheck:latest
-RUN ./docker-artifact artifact get donald.gif tomwillfixit/healthcheck:latest
-RUN ./docker-artifact artifact get tom.jpg tomwillfixit/healthcheck:latest
+# Download file from image
 
-ENTRYPOINT /bin/bash
+RUN /docker-artifact.sh artifact get tom.jpg tomwillfixit/healthcheck:latest
 
+ENTRYPOINT ["/bin/bash"]
 ```
 
-## Example 
+## Comparison
 
-When pulling a single file from a 60mb Docker image using "docker get" and no local cache we see roughly a 40% decrease in build time when compared to the same build copying the file with this command : 
-
-COPY --from=tomwillfixit/test:latest /tmp/shipitcon.jpg /tmp
+Comparing a regular docker build with RUN --copy against a build using [BuildKit](https://docs.docker.com/develop/develop-images/build_enhancements/) and docker-artifact.
 
 ```
-time docker build --no-cache -t test:latest .
-Sending build context to Docker daemon  691.8MB
-Step 1/5 : FROM alpine:3.11
+time docker build --no-cache -t artifact:latest -f Dockerfile.old .
+
+Sending build context to Docker daemon  1.224MB
+Step 1/4 : FROM alpine:3.11
  ---> f70734b6a266
-Step 2/5 : RUN apk update && apk add bash jq curl
- ---> Running in 68e8409923ab
+Step 2/4 : RUN apk add --update     curl jq bash
+ ---> Running in 1b1a060187ca
 fetch http://dl-cdn.alpinelinux.org/alpine/v3.11/main/x86_64/APKINDEX.tar.gz
 fetch http://dl-cdn.alpinelinux.org/alpine/v3.11/community/x86_64/APKINDEX.tar.gz
-v3.11.6-10-g3d1aef7a83 [http://dl-cdn.alpinelinux.org/alpine/v3.11/main]
-v3.11.6-15-g3ae2cc62ea [http://dl-cdn.alpinelinux.org/alpine/v3.11/community]
-OK: 11270 distinct packages available
 (1/10) Installing ncurses-terminfo-base (6.1_p20200118-r4)
 (2/10) Installing ncurses-libs (6.1_p20200118-r4)
 (3/10) Installing readline (8.0.1-r0)
@@ -184,80 +183,58 @@ Executing bash-5.0.11-r1.post-install
 Executing busybox-1.31.1-r9.trigger
 Executing ca-certificates-20191127-r1.trigger
 OK: 10 MiB in 24 packages
-Removing intermediate container 68e8409923ab
- ---> a5d0abc39e26
-Step 3/5 : COPY docker-artifact /docker-artifact
- ---> a6b15d7220bd
-Step 4/5 : RUN ./docker-artifact get shipitcon.jpg tomwillfixit/test:latest
- ---> Running in 317700daaadd
-[*] Get File : shipitcon.jpg from Docker Image : tomwillfixit/test:latest
-[*] Retrieve Docker Hub Token
-[*] File : shipitcon.jpg is not available to get.
-Removing intermediate container 317700daaadd
- ---> 1dafa64c740d
-Step 5/5 : ENTRYPOINT /bin/bash
- ---> Running in 7f7d07d8f35f
-Removing intermediate container 7f7d07d8f35f
- ---> c0b4b41d7f52
-Successfully built c0b4b41d7f52
-Successfully tagged test:latest
+Removing intermediate container 1b1a060187ca
+ ---> 60a5294cb42c
+Step 3/4 : COPY --from=tomwillfixit/healthcheck:latest /tmp/tom.jpg .
+latest: Pulling from tomwillfixit/healthcheck
+207e252fc310: Pull complete 
+32689c3f8745: Pull complete 
+2db578c3bba0: Pull complete 
+799f3a35dfec: Pull complete 
+f18fc9811693: Pull complete 
+e843085f4be7: Pull complete 
+Digest: sha256:72d3a7d24e06f3c32e31d84f03a527fd4a492c34262f4c882251f2c4c10edc3f
+Status: Downloaded newer image for tomwillfixit/healthcheck:latest
+ ---> 5790f2288697
+Step 4/4 : ENTRYPOINT ["/bin/bash"]
+ ---> Running in f88d2f49c95f
+Removing intermediate container f88d2f49c95f
+ ---> 20face702798
+Successfully built 20face702798
+Successfully tagged artifact:latest
 
-real	0m23.372s
-user	0m0.360s
-sys	0m0.516s
-root@tom-laptop:~/test_plugin# docker rmi tomwillfixit/test:latest
-Error: No such image: tomwillfixit/test:latest
-root@tom-laptop:~/test_plugin# vi Dockerfile 
-root@tom-laptop:~/test_plugin# time docker build --no-cache -t test:latest .
-Sending build context to Docker daemon  691.8MB
-Step 1/5 : FROM alpine:3.11
- ---> f70734b6a266
-Step 2/5 : RUN apk update && apk add bash jq curl
- ---> Running in eb4ee35c32cb
-fetch http://dl-cdn.alpinelinux.org/alpine/v3.11/main/x86_64/APKINDEX.tar.gz
-fetch http://dl-cdn.alpinelinux.org/alpine/v3.11/community/x86_64/APKINDEX.tar.gz
-v3.11.6-10-g3d1aef7a83 [http://dl-cdn.alpinelinux.org/alpine/v3.11/main]
-v3.11.6-15-g3ae2cc62ea [http://dl-cdn.alpinelinux.org/alpine/v3.11/community]
-OK: 11270 distinct packages available
-(1/10) Installing ncurses-terminfo-base (6.1_p20200118-r4)
-(2/10) Installing ncurses-libs (6.1_p20200118-r4)
-(3/10) Installing readline (8.0.1-r0)
-(4/10) Installing bash (5.0.11-r1)
-Executing bash-5.0.11-r1.post-install
-(5/10) Installing ca-certificates (20191127-r1)
-(6/10) Installing nghttp2-libs (1.40.0-r0)
-(7/10) Installing libcurl (7.67.0-r0)
-(8/10) Installing curl (7.67.0-r0)
-(9/10) Installing oniguruma (6.9.4-r0)
-(10/10) Installing jq (1.6-r0)
-Executing busybox-1.31.1-r9.trigger
-Executing ca-certificates-20191127-r1.trigger
-OK: 10 MiB in 24 packages
-Removing intermediate container eb4ee35c32cb
- ---> 9db2b9f1ba55
-Step 3/5 : COPY docker-get /docker-get
- ---> c8e6b9f5d297
-Step 4/5 : COPY --from=tomwillfixit/test:latest /tmp/shipitcon.jpg /tmp
-latest: Pulling from tomwillfixit/test
-cbdbe7a5bc2a: Already exists 
-bb761cc53ae3: Already exists 
-d504619ed165: Already exists 
-86a813148ec6: Pull complete 
-70526af28813: Pull complete 
-Digest: sha256:90631751527bf02b862399163df5b89cd81cfd54a526a1ac527a27f18314fa53
-Status: Downloaded newer image for tomwillfixit/test:latest
- ---> f590b482e6bb
-Step 5/5 : ENTRYPOINT /bin/bash
- ---> Running in 3923e4be4d47
-Removing intermediate container 3923e4be4d47
- ---> bcaa9694a91c
-Successfully built bcaa9694a91c
-Successfully tagged test:latest
+real	0m10.953s
+user	0m0.175s
+sys	0m0.157s
 
-real	1m35.225s
-user	0m0.536s
-sys	0m0.524s
-```
+Docker BuildKit : 
+
+time DOCKER_BUILDKIT=1 docker build --no-cache -t artifact:latest .
+[+] Building 7.5s (11/11) FINISHED                                                                                                                                                                              
+ => [internal] load build definition from Dockerfile                                                                                                                                                       0.0s
+ => => transferring dockerfile: 37B                                                                                                                                                                        0.0s
+ => [internal] load .dockerignore                                                                                                                                                                          0.0s
+ => => transferring context: 2B                                                                                                                                                                            0.0s
+ => resolve image config for docker.io/docker/dockerfile:experimental                                                                                                                                      1.5s
+ => CACHED docker-image://docker.io/docker/dockerfile:experimental@sha256:de85b2f3a3e8a2f7fe48e8e84a65f6fdd5cd5183afa6412fff9caa6871649c44                                                                 0.0s
+ => [internal] load metadata for docker.io/library/alpine:3.11                                                                                                                                             0.0s
+ => [internal] load build context                                                                                                                                                                          0.0s
+ => => transferring context: 40B                                                                                                                                                                           0.0s
+ => CACHED [stage-0 1/4] FROM docker.io/library/alpine:3.11                                                                                                                                                0.0s
+ => [stage-0 2/4] RUN --mount=type=cache,id=apk,target=/var/cache/apk ln -vs /var/cache/apk /etc/apk/cache &&  apk add --update         curl jq bash                                                       3.0s
+ => [stage-0 3/4] COPY docker-artifact.sh /docker-artifact.sh                                                                                                                                              0.1s
+ => [stage-0 4/4] RUN /docker-artifact.sh artifact get tom.jpg tomwillfixit/healthcheck:latest                                                                                                             2.5s 
+ => exporting to image                                                                                                                                                                                     0.1s 
+ => => exporting layers                                                                                                                                                                                    0.1s 
+ => => writing image sha256:1af798e80808e297c4f2c89d4c35f9a6bc2c89d806d601cdfd251c0d7f5b776e                                                                                                               0.0s 
+ => => naming to docker.io/library/artifact:latest                                                                                                                                                         0.0s 
+
+real	0m7.611s
+user	0m0.097s
+sys	0m0.070s
+
+
+``` 
 
 ## More Info
 
