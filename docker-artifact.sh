@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
+# Supports pulling artifacts from Images stored in Amazon Elastic Container Registry and Docker Hub.
+
 docker_artifact_plugin_metadata() {
 	local vendor="tomwillfixit"
-	local version="v0.0.3"
+	local version="v0.0.5"
 	local url="https://t.co/QgwMQIxt4L?amp=1"
 	local description="Manage Artifacts in Docker Images"
 	cat <<-EOF
@@ -90,7 +92,6 @@ docker push $image
 
 }
 
-
 docker_get() {
 
 array=( $@ )
@@ -98,45 +99,118 @@ len=${#array[@]}
 docker_image=${array[$len-1]}
 files=${array[@]:0:$len-1}
 
-reg=registry.hub.docker.com
-repo=$(echo $docker_image |cut -d"/" -f1)
-image=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f1)
-token=$(get_token "$repo/$image")
-tag=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f2)
+if [[ "${docker_image}" =~ ".ecr." ]];then
 
-for filename in $(echo ${files});
-do
- 	echo "[*] Get File : $filename from Docker Image : $docker_image"	
-	file_sha256_value=$(curl --silent -H "Authorization: Bearer $token" https://$reg/v2/$repo/$image/manifests/$tag |jq -r '.history[0].v1Compatibility' |jq -r --arg FILENAME $filename '.container_config.Labels | to_entries[] |select(.key==$FILENAME)' |jq -r '.value')
-	if [ -z "${file_sha256_value}" ];then
-		echo "[*] File : $filename is not available to get."
-		exit 0
-	else
-        	echo "[*] Downloading file $filename ($file_sha256_value) ..."
- 		curl -s -L -H "Authorization: Bearer $token" "https://registry.hub.docker.com/v2/$repo/$image/blobs/$file_sha256_value" |tar -xz
+	#aws ecr get-download-url-for-layer --repository-name internal-deployment-cli --layer-digest=sha256:c887ee98c22696928d21296a9f2149c572ee22f482c150e72e283a523e5a9684 |jq -r '.downloadUrl'
+	region=$(echo $docker_image |cut -d'.' -f4)
+        repo=$(echo $docker_image |cut -d':' -f1 |cut -d'/' -f2)
+        tag=$(echo $docker_image |cut -d':' -f2)
+
+	for filename in $(echo ${files});
+        do
+		echo "[*] Get File : $filename from Docker Image : $docker_image"
+		file_sha256_value=$(aws ecr batch-get-image \
+	        --repository-name ${repo} \
+        	--image-id imageTag=${tag} \
+        	--region ${region} \
+        	--accepted-media-types "application/vnd.docker.distribution.manifest.v1+json" \
+        	--output json \
+        	|jq -r '.images[].imageManifest' \
+        	|jq -r '.history[0].v1Compatibility' \
+        	|jq -r --arg FILENAME $filename '.config.Labels |to_entries[] |select(.key==$FILENAME)' |jq -r '.value')
+		if [ -z "${file_sha256_value}" ];then
+                        echo "[*] File : $filename is not available to get."
+                        exit 0
+                else
+                        echo "[*] Downloading file $filename ($file_sha256_value) ..."
+			download_url=$(aws ecr get-download-url-for-layer --repository-name ${repo} --layer-digest=${file_sha256_value} |jq -r '.downloadUrl')
+			curl -s -X GET "${download_url}" --output ${filename}.tar
+			tar -xvf ${filename}.tar
+			rm ${filename}.tar
+                fi
+	done
+else
+	reg=registry.hub.docker.com
+	repo=$(echo $docker_image |cut -d"/" -f1)
+	image=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f1)
+	token=$(get_token "$repo/$image")
+	tag=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f2)
+
+	for filename in $(echo ${files});
+	do
+ 		echo "[*] Get File : $filename from Docker Image : $docker_image"	
+		file_sha256_value=$(curl --silent -H "Authorization: Bearer $token" https://$reg/v2/$repo/$image/manifests/$tag |jq -r '.history[0].v1Compatibility' |jq -r --arg FILENAME $filename '.container_config.Labels | to_entries[] |select(.key==$FILENAME)' |jq -r '.value')
+		if [ -z "${file_sha256_value}" ];then
+			echo "[*] File : $filename is not available to get."
+			exit 0
+		else
+        		echo "[*] Downloading file $filename ($file_sha256_value) ..."
+ 			curl -s -L -H "Authorization: Bearer $token" "https://registry.hub.docker.com/v2/$repo/$image/blobs/$file_sha256_value" |tar -xz
+        	fi
+	done
+
+fi
+
+}
+
+list_files_ecr_image() {
+
+	ecr_image=$1
+	# This piece of code is quite fragile. Assumes ecr naming is standardized.
+	region=$(echo $ecr_image |cut -d'.' -f4)
+	repo=$(echo $ecr_image |cut -d':' -f1 |cut -d'/' -f2)
+	tag=$(echo $ecr_image |cut -d':' -f2)
+
+	files=$(aws ecr batch-get-image \
+	--repository-name ${repo} \
+	--image-id imageTag=${tag} \
+	--region ${region} \
+	--accepted-media-types "application/vnd.docker.distribution.manifest.v1+json" \
+	--output json \
+	|jq -r '.images[].imageManifest' \
+	|jq -r '.history[0].v1Compatibility' \
+	|jq -r '.config.Labels | to_entries[] | select(.value | contains("sha256"))' |jq -r '.key')
+
+	if [ -z "$files" ];then
+                echo "[*] No files found."
+        else
+                echo -e "\n[*] Files available to get :\n"
+                for filename in $(echo ${files})
+                do
+                        echo "  - ${filename}"
+                done
         fi
-done
 
+}
+
+list_files_docker_hub() {
+
+	reg=registry.hub.docker.com
+        repo=$(echo $docker_image |cut -d"/" -f1)
+        image=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f1)
+        token=$(get_token "$repo/$image")
+        tag=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f2)
+        files=$(curl --silent -H "Authorization: Bearer $token" https://$reg/v2/$repo/$image/manifests/$tag |jq -r '.history[0].v1Compatibility' |jq -r '.container_config.Labels | to_entries[] | select(.value | contains("sha256"))' |jq -r '.key')
+
+	if [ -z "$files" ];then
+                echo "[*] No files found."
+        else
+                echo -e "\n[*] Files available to get :\n"
+                for filename in $(echo ${files})
+                do
+                        echo "  - ${filename}"
+                done
+        fi
 }
 
 list_files() {
 	docker_image=$1
 	echo "[*] Listing Files available to get from Image : ${docker_image}"
-	reg=registry.hub.docker.com
-	repo=$(echo $docker_image |cut -d"/" -f1)
-        image=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f1)
-	token=$(get_token "$repo/$image")	
-	tag=$(echo $docker_image |cut -d"/" -f2 |cut -d":" -f2)
-	files=$(curl --silent -H "Authorization: Bearer $token" https://$reg/v2/$repo/$image/manifests/$tag |jq -r '.history[0].v1Compatibility' |jq -r '.container_config.Labels | to_entries[] | select(.value | contains("sha256"))' |jq -r '.key')
-	if [ -z "$files" ];then
-		echo "[*] No files found."
+        if [[ "${docker_image}" =~ ".ecr." ]];then
+            list_files_ecr_image ${docker_image}
 	else
-		echo -e "\n[*] Files available to get :\n"
-		for filename in $(echo ${files})
-		do
-			echo "	- ${filename}"
-		done
-	fi
+	    list_files_docker_hub ${docker_image}
+        fi
 	echo ""
 
 }
