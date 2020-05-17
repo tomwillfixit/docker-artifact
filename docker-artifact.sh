@@ -101,7 +101,6 @@ files=${array[@]:0:$len-1}
 
 if [[ "${docker_image}" =~ ".ecr." ]];then
 
-	#aws ecr get-download-url-for-layer --repository-name internal-deployment-cli --layer-digest=sha256:c887ee98c22696928d21296a9f2149c572ee22f482c150e72e283a523e5a9684 |jq -r '.downloadUrl'
 	region=$(echo $docker_image |cut -d'.' -f4)
         repo=$(echo $docker_image |cut -d':' -f1 |cut -d'/' -f2)
         tag=$(echo $docker_image |cut -d':' -f2)
