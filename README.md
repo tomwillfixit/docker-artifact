@@ -22,7 +22,23 @@ This command relies on a LABEL pointing to the layer containing the "happy.jpg" 
 
 Based on this [post](https://medium.com/@thomas.shaw78/extracting-a-single-artifact-from-a-docker-image-without-pulling-3fc038a6e57e).
 
-# Prerequisites
+# Working Example using BuildKit 
+
+The Dockerfile in this repository has a working example of copying the docker-artifact script in at build time and using it to download a single file from an image.
+
+```
+
+git clone https://github.com/tomwillfixit/docker-artifact.git
+
+cd docker-artifact
+
+DOCKER_BUILDKIT=1 docker build --no-cache --progress=plain -t demo .
+
+```
+
+# Setting up the plugin
+
+## Prerequisites
 
 You must be using Docker 19.03 or newer for the plugin to work.
 

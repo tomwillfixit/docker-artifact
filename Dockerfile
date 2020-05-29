@@ -4,18 +4,11 @@ FROM alpine:3.11
 
 RUN --mount=type=cache,id=apk,target=/var/cache/apk ln -vs /var/cache/apk /etc/apk/cache && \
 	apk add --update \
-        python3 curl jq bash
+        python3 curl jq bash 
 
-# Upgrade pip3  
-RUN --mount=type=cache,id=pip,target=/root/.cache/pip pip3 install -U pip
+COPY --from=tomwillfixit/docker-artifact:latest docker-artifact.sh /docker-artifact
 
-# Install awscli 
-RUN --mount=type=cache,id=pip,target=/root/.cache/pip pip3 install awscli==1.18.9 fastly 
+# Download single file from big image using docker artifact
 
-COPY docker-artifact.sh /docker-artifact.sh
+RUN /docker-artifact get DockerDesktop.png tomwillfixit/big-image:latest 
 
-# Download file from image
-
-RUN /docker-artifact.sh artifact get tom.jpg tomwillfixit/healthcheck:latest
-
-ENTRYPOINT ["/bin/bash"]
