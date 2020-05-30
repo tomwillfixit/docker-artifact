@@ -1,6 +1,6 @@
-# This is a basic workflow to help you get started with Actions
+# This workflow will build the tomwillfixit/docker-artifact:latest image
 
-name: test-artifact-get
+name: build-test-docker-artifact-image
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
@@ -18,6 +18,15 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     - uses: actions/checkout@master
+    - uses: docker/build-push-action@v1
+      env:
+        DOCKER_BUILDKIT: 1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        path: build-docker-artifact-image 
+        repository: tomwillfixit/docker-artifact
+        tags: latest
     - uses: docker/build-push-action@v1
       env:
         DOCKER_BUILDKIT: 1
