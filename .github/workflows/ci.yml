@@ -2,20 +2,19 @@
 
 name: build-test-docker-artifact-image
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
 on:
   push:
     branches: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# The first job builds the docker-artifact image and pushes to tomwillfixit/docker-artifact:latest
+# The second job builds a test image which uses docker-artifact to pull a single artifact from another image
+
 jobs:
-  # This workflow contains a single job called "build"
+  # This workflow contains 2 jobs called "build" and "test"
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    runs-on: ubuntu-latest  
     steps:
     - uses: actions/checkout@master
     - uses: docker/build-push-action@v1
@@ -27,11 +26,17 @@ jobs:
         path: build-docker-artifact-image 
         repository: tomwillfixit/docker-artifact
         tags: latest
-    - uses: docker/build-push-action@v1
-      env:
-        DOCKER_BUILDKIT: 1
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-        repository: tomwillfixit/test
-        tags: latest
+    
+    test:
+      # The type of runner that the job will run on
+      runs-on: ubuntu-latest
+      steps: 
+      - uses: actions/checkout@master
+      - uses: docker/build-push-action@v1
+        env:
+          DOCKER_BUILDKIT: 1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: tomwillfixit/test
+          tags: latest
