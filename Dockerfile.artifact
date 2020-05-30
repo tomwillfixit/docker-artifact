@@ -4,7 +4,7 @@ FROM alpine:3.11
 
 RUN --mount=type=cache,id=apk,target=/var/cache/apk ln -vs /var/cache/apk /etc/apk/cache && \
 	apk add --update \
-        python3 curl jq bash 
+        curl jq bash 
 
 COPY --from=tomwillfixit/docker-artifact:latest docker-artifact.sh /docker-artifact
 
