@@ -27,16 +27,16 @@ jobs:
         repository: tomwillfixit/docker-artifact
         tags: latest
     
-    test:
-      # The type of runner that the job will run on
-      runs-on: ubuntu-latest
-      steps: 
-      - uses: actions/checkout@master
-      - uses: docker/build-push-action@v1
-        env:
-          DOCKER_BUILDKIT: 1
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: tomwillfixit/test
-          tags: latest
+  test:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    steps: 
+    - uses: actions/checkout@master
+    - uses: docker/build-push-action@v1
+      env:
+        DOCKER_BUILDKIT: 1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        repository: tomwillfixit/test
+        tags: latest
