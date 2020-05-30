@@ -40,7 +40,7 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
         repository: tomwillfixit/test
-	dockerfile: Dockerfile.copy
+        dockerfile: Dockerfile.copy
         tags: latest
 
   test-artifact:
